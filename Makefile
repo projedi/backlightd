@@ -2,7 +2,7 @@
 
 TARGET := backlight_helper
 
-SOURCES := main.c
+SOURCES := main.c io.c backlight.c
 OBJECTS := $(SOURCES:.c=.o)
 DEPENDS := $(SOURCES:.c=.d)
 
