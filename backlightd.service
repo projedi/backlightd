@@ -1,0 +1,8 @@
+[Unit]
+Description=Backlight daemon
+
+[Service]
+ExecStart=/usr/local/bin/backlightd
+
+[Install]
+WantedBy=multi-user.target
