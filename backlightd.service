@@ -1,5 +1,6 @@
 [Unit]
 Description=Backlight daemon
+Requires=acpid.socket
 
 [Service]
 ExecStart=/usr/local/bin/backlightd
