@@ -1,4 +1,4 @@
 *.sw[op]
-backlight_helper
+/backlightd
 *.o
 *.d

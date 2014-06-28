@@ -1,6 +1,6 @@
-.PHONY: all clean setuid-root
+.PHONY: all clean
 
-TARGET := backlight_helper
+TARGET := backlightd
 
 SOURCES := main.c io.c backlight.c
 OBJECTS := $(SOURCES:.c=.o)
@@ -14,7 +14,7 @@ LDFLAGS +=
 
 LIBS += -lm
 
-all: setuid-root
+all: $(TARGET)
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $<
@@ -30,7 +30,3 @@ clean:
 	rm -f $(OBJECTS) $(DEPENDS)
 
 include $(DEPENDS)
-
-setuid-root: $(TARGET)
-	sudo chown root backlight_helper
-	sudo chmod u+s backlight_helper

@@ -1,0 +1,30 @@
+#!/bin/sh
+
+SCRIPT_NAME=$0
+
+FIFO_NAME="/tmp/backlightd.fifo"
+
+function usage() {
+	echo "USAGE: $SCRIPT_NAME {up|down}"
+}
+
+function send() {
+	if [[ ! -p $FIFO_NAME ]]; then
+		echo "backlightd not running"
+		exit 1
+	fi
+	echo -ne "\x0$1" > /tmp/backlightd.fifo
+}
+
+case "$1" in
+	"up")
+		send 1
+		;;
+	"down")
+		send 0
+		;;
+	*)
+		usage
+		exit 1
+		;;
+esac
