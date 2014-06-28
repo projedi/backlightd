@@ -12,7 +12,7 @@
 // returns a value between 0 and 1.
 double backlight_function(double level) {
 	double x = clamp(level, 0, 1);
-	double y = x;
+	double y = (x * x * x + x * x * x * x) / 2;
 	return clamp(y, 0, 1);
 }
 
