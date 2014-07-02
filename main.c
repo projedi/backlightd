@@ -1,5 +1,6 @@
 #include <errno.h>
 #include <fcntl.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -92,13 +93,7 @@ void handle_acpi_event(char const* buf) {
 	}
 }
 
-void acpi_listen() {
-	int ret = fork();
-	if(ret == -1) {
-		perror("Cannot fork");
-		exit(EXIT_FAILURE);
-	}
-	if(ret) return;
+void* acpi_listen(void* data) {
 	int s = socket(AF_UNIX, SOCK_STREAM, 0);
 	if(s == -1) {
 		perror("Cannot open socket");
@@ -123,12 +118,17 @@ void acpi_listen() {
 		buf[len] = 0;
 		handle_acpi_event(buf);
 	}
+	return NULL;
 }
 
 int main() {
 	backlight_save();
 	umask(0);
-	acpi_listen();
+	pthread_t t;
+	if(pthread_create(&t, NULL, acpi_listen, NULL)) {
+		perror("Cannot create a thread");
+		exit(EXIT_FAILURE);
+	}
 	for(;;) {
 		int fifo = open_fifo();
 		int v = 0;

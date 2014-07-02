@@ -8,9 +8,9 @@ DEPENDS := $(SOURCES:.c=.d)
 
 CC ?= gcc
 
-CFLAGS += -std=c99 -Wall -Wextra
+CFLAGS += -g -std=c99 -Wall -Wextra -pthread
 
-LDFLAGS +=
+LDFLAGS += -pthread
 
 LIBS += -lm
 
