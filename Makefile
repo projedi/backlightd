@@ -1,10 +1,15 @@
 .PHONY: all clean
 
-TARGET := backlightd
+TARGET_DAEMON := backlightd
+TARGET_CLIENT := backlightctl
 
-SOURCES := backlightd.c io.c backlight.c
-OBJECTS := $(SOURCES:.c=.o)
-DEPENDS := $(SOURCES:.c=.d)
+SOURCES_DAEMON := backlightd.c io.c backlight.c
+OBJECTS_DAEMON := $(SOURCES_DAEMON:.c=.o)
+DEPENDS_DAEMON := $(SOURCES_DAEMON:.c=.d)
+
+SOURCES_CLIENT := backlightctl.c
+OBJECTS_CLIENT := $(SOURCES_CLIENT:.c=.o)
+DEPENDS_CLIENT := $(SOURCES_CLIENT:.c=.d)
 
 CC ?= gcc
 
@@ -14,7 +19,7 @@ LDFLAGS += -pthread $(shell pkg-config --libs-only-L dbus-1)
 
 LIBS += -lm $(shell pkg-config --libs-only-l dbus-1)
 
-all: $(TARGET)
+all: $(TARGET_DAEMON) $(TARGET_CLIENT)
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $<
@@ -22,11 +27,14 @@ all: $(TARGET)
 %.d: %.c
 	$(CC) $(CFLAGS) -MF $@ -MG -MM -MP -MT $(^:.c=.o) $<
 
-$(TARGET): $(OBJECTS)
-	$(CC) $^ $(LDFLAGS) $(LIBS) -o $(TARGET)
+$(TARGET_DAEMON): $(OBJECTS_DAEMON)
+	$(CC) $^ $(LDFLAGS) $(LIBS) -o $(TARGET_DAEMON)
+
+$(TARGET_CLIENT): $(OBJECTS_CLIENT)
+	$(CC) $^ $(LDFLAGS) $(LIBS) -o $(TARGET_CLIENT)
 
 clean:
-	rm -f $(TARGET)
-	rm -f $(OBJECTS) $(DEPENDS)
+	rm -f $(TARGET_DAEMON) $(TARGET_CLIENT)
+	rm -f $(OBJECTS_DAEMON) $(DEPENDS_DAEMON) $(OBJECTS_CLIENT) $(DEPENDS_CLIENT)
 
-include $(DEPENDS)
+include $(DEPENDS_DAEMON) $(DEPENDS_CLIENT)

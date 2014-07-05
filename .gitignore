@@ -2,3 +2,4 @@
 /backlightd
 *.o
 *.d
+/backlightctl
