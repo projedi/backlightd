@@ -1,4 +1,5 @@
 #include <errno.h>
+#include <dbus/dbus.h>
 #include <fcntl.h>
 #include <pthread.h>
 #include <stdio.h>
@@ -13,7 +14,6 @@
 #include "backlight.h"
 #include "io.h"
 
-#define FIFO_PATH "/tmp/backlightd.fifo"
 #define ACPID_SOCKET "/var/run/acpid.socket"
 
 static int CURRENT_BACKLIGHT_VALUE = -1;
@@ -48,22 +48,55 @@ void backlight_restore() {
 	backlight_write(CURRENT_BACKLIGHT_VALUE);
 }
 
-int open_fifo() {
-	int ret;
-	if((ret = mkfifo(FIFO_PATH, 0666)) == -1) {
-		if(errno == EEXIST) {
-			if(unlink(FIFO_PATH) == -1) {
-				perror("Cannot unlink " FIFO_PATH);
-				exit(EXIT_FAILURE);
-			}
-			ret = mkfifo(FIFO_PATH, 0666);
-		}
-		if(ret == -1) {
-			perror("Cannot create fifo " FIFO_PATH);
-			exit(EXIT_FAILURE);
-		}
+void dbus_listen() {
+	DBusError err;
+	dbus_error_init(&err);
+
+	DBusConnection* connection = dbus_bus_get(DBUS_BUS_SESSION, &err);
+	if(dbus_error_is_set(&err)) {
+		fprintf(stderr, "Connection error: %s\n", err.message);
+		dbus_error_free(&err);
 	}
-	return open(FIFO_PATH, O_RDONLY);
+	if(!connection) {
+		fprintf(stderr, "Connection is NULL\n");
+		exit(1);
+	}
+
+	int res = dbus_bus_request_name(connection, "org.backlightd.daemon",
+			DBUS_NAME_FLAG_REPLACE_EXISTING, &err);
+	if(dbus_error_is_set(&err)) {
+		fprintf(stderr, "Requesting name error: %s\n", err.message);
+		dbus_error_free(&err);
+	}
+	if(DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER != res) {
+		fprintf(stderr, "Not a primary owner: %d\n", res);
+		exit(1);
+	}
+
+	dbus_bus_add_match(connection, "type='signal',interface='org.backlightd.Backlight'", &err);
+	dbus_connection_flush(connection);
+	if(dbus_error_is_set(&err)) {
+		fprintf(stderr, "Error adding match: %s\n", err.message);
+		exit(1);
+	}
+
+	while(1) {
+		dbus_connection_read_write(connection, -1);
+		DBusMessage* message = dbus_connection_pop_message(connection);
+		if(!message) {
+			fprintf(stderr, "Message is NULL\n");
+			exit(1);
+		}
+
+		if(dbus_message_is_signal(message, "org.backlightd.Backlight", "Increase"))
+			backlight_up();
+		else if(dbus_message_is_signal(message, "org.backlightd.Backlight", "Decrease"))
+			backlight_down();
+		else
+			fprintf(stderr, "Unknown dbus message\n");
+
+		dbus_message_unref(message);
+	}
 }
 
 void handle_acpi_event(char const* buf) {
@@ -129,22 +162,6 @@ int main() {
 		perror("Cannot create a thread");
 		exit(EXIT_FAILURE);
 	}
-	for(;;) {
-		int fifo = open_fifo();
-		int v = 0;
-		int ret;
-		if((ret = read(fifo, &v, 1)) != 1) {
-			if(ret == -1) {
-				perror("Cannot read from " FIFO_PATH);
-				exit(EXIT_FAILURE);
-			}
-			fprintf(stderr, "Read %d bytes from " FIFO_PATH " expected 1\n", ret);
-			exit(EXIT_FAILURE);
-		}
-		if(v == 0) backlight_down();
-		else if(v == 1) backlight_up();
-		else fprintf(stderr, "Expected either 0 or 1, got %d\n", v);
-		close(fifo);
-	}
+	dbus_listen();
 	return EXIT_SUCCESS;
 }

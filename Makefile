@@ -2,17 +2,17 @@
 
 TARGET := backlightd
 
-SOURCES := main.c io.c backlight.c
+SOURCES := backlightd.c io.c backlight.c
 OBJECTS := $(SOURCES:.c=.o)
 DEPENDS := $(SOURCES:.c=.d)
 
 CC ?= gcc
 
-CFLAGS += -g -std=c99 -Wall -Wextra -pthread
+CFLAGS += -g -std=c99 -Wall -Wextra -pthread $(shell pkg-config --cflags dbus-1)
 
-LDFLAGS += -pthread
+LDFLAGS += -pthread $(shell pkg-config --libs-only-L dbus-1)
 
-LIBS += -lm
+LIBS += -lm $(shell pkg-config --libs-only-l dbus-1)
 
 all: $(TARGET)
 
