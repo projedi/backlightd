@@ -73,27 +73,25 @@ void dbus_listen() {
 		exit(1);
 	}
 
-	dbus_bus_add_match(connection, "type='signal',interface='org.backlightd.Backlight'", &err);
-	dbus_connection_flush(connection);
-	if(dbus_error_is_set(&err)) {
-		fprintf(stderr, "Error adding match: %s\n", err.message);
-		exit(1);
-	}
-
 	while(1) {
-		dbus_connection_read_write(connection, -1);
+		// TODO: Blocking does not work for some reason
+		dbus_connection_read_write(connection, 0);
 		DBusMessage* message = dbus_connection_pop_message(connection);
 		if(!message) {
-			fprintf(stderr, "Message is NULL\n");
-			exit(1);
+			usleep(10000);
+			continue;
 		}
 
-		if(dbus_message_is_signal(message, "org.backlightd.Backlight", "Increase"))
+		if(dbus_message_is_method_call(message, "org.backlightd.Backlight", "Increase"))
 			backlight_up();
-		else if(dbus_message_is_signal(message, "org.backlightd.Backlight", "Decrease"))
+		else if(dbus_message_is_method_call(message, "org.backlightd.Backlight", "Decrease"))
 			backlight_down();
-		else
+		else {
 			fprintf(stderr, "Unknown dbus message\n");
+			fprintf(stderr, "\tInterface: %s\n", dbus_message_get_interface(message));
+			fprintf(stderr, "\tMember: %s\n", dbus_message_get_member(message));
+			fprintf(stderr, "\tPath: %s\n", dbus_message_get_path(message));
+		}
 
 		dbus_message_unref(message);
 	}
