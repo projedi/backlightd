@@ -7,25 +7,13 @@ void dbus_sendsignal(char const* name) {
 	DBusError err;
 	dbus_error_init(&err);
 
-	DBusConnection* connection = dbus_bus_get(DBUS_BUS_SESSION, &err);
+	DBusConnection* connection = dbus_bus_get(DBUS_BUS_SYSTEM, &err);
 	if(dbus_error_is_set(&err)) {
 		fprintf(stderr, "Connection error: %s\n", err.message);
 		dbus_error_free(&err);
 	}
 	if(!connection) {
 		fprintf(stderr, "Connection is NULL\n");
-		exit(1);
-	}
-
-	// TODO: not sure about that REPLACE_EXISTING thing
-	int res = dbus_bus_request_name(connection, "org.backlightd.client",
-			DBUS_NAME_FLAG_REPLACE_EXISTING, &err);
-	if(dbus_error_is_set(&err)) {
-		fprintf(stderr, "Requesting name error: %s\n", err.message);
-		dbus_error_free(&err);
-	}
-	if(DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER != res) {
-		fprintf(stderr, "Not a primary owner: %d\n", res);
 		exit(1);
 	}
 

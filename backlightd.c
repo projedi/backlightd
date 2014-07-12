@@ -52,7 +52,7 @@ void dbus_listen() {
 	DBusError err;
 	dbus_error_init(&err);
 
-	DBusConnection* connection = dbus_bus_get(DBUS_BUS_SESSION, &err);
+	DBusConnection* connection = dbus_bus_get(DBUS_BUS_SYSTEM, &err);
 	if(dbus_error_is_set(&err)) {
 		fprintf(stderr, "Connection error: %s\n", err.message);
 		dbus_error_free(&err);
