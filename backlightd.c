@@ -82,6 +82,8 @@ void dbus_listen() {
 			continue;
 		}
 
+		if(dbus_message_is_signal(message, "org.freedesktop.DBus", "NameAcquired"))
+			continue;
 		if(dbus_message_is_method_call(message, "org.backlightd.Backlight", "Increase"))
 			backlight_up();
 		else if(dbus_message_is_method_call(message, "org.backlightd.Backlight", "Decrease"))
