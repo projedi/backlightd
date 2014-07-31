@@ -1,20 +1,15 @@
 #include <errno.h>
 #include <dbus/dbus.h>
-#include <fcntl.h>
+#include <libudev.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/socket.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <sys/un.h>
+#include <sys/select.h>
 #include <unistd.h>
 
 #include "backlight.h"
 #include "io.h"
-
-#define ACPID_SOCKET "/var/run/acpid.socket"
 
 static int CURRENT_BACKLIGHT_VALUE = -1;
 
@@ -99,58 +94,48 @@ void dbus_listen() {
 	}
 }
 
-void handle_acpi_event(char const* buf) {
-	char copy_buf[4097];
-	strncpy(copy_buf, buf, sizeof(copy_buf));
-	char const* type = copy_buf;
-	char const* name = NULL;
-	char const* data1 = NULL;
-	char const* data2 = NULL;
-	char const** splits[] = { &name, &data1, &data2 };
-	int on_splitter = 0;
-	int split_idx = 0;
-	char* sbuf = copy_buf;
-	for(; *sbuf; ++sbuf) {
-		if(*sbuf == ' ' || *sbuf == '\t') {
-			on_splitter = 1;
-			*sbuf = 0;
-			continue;
+void* udev_listen(void* data) {
+	struct udev* udev = udev_new();
+	if(!udev) {
+		perror("Cannot create udev device");
+		return NULL;
+	}
+	struct udev_monitor* udev_monitor = udev_monitor_new_from_netlink(udev, "udev");
+	if(!udev) {
+		perror("Cannot create udev_monitor");
+		goto cleanup;
+	}
+	if(udev_monitor_filter_add_match_subsystem_devtype(udev_monitor, "power_supply", 0) < 0) {
+		perror("Cannot add a filter to udev_monitor");
+		goto cleanup;
+	}
+	if(udev_monitor_enable_receiving(udev_monitor) < 0) {
+		perror("Cannot receive data on monitor");
+		goto cleanup;
+	}
+	int fd = udev_monitor_get_fd(udev_monitor);
+	fd_set fds;
+	FD_ZERO(&fds);
+	FD_SET(fd, &fds);
+	while(1) {
+		int ret = select(fd + 1, &fds, NULL, NULL, NULL);
+		if(ret > 0 && FD_ISSET(fd, &fds)) {
+			struct udev_device* dev = udev_monitor_receive_device(udev_monitor);
+			if(dev) {
+				const char* action = udev_device_get_action(dev);
+				const char* prop = udev_device_get_property_value(dev, "POWER_SUPPLY_ONLINE");
+				if(prop && !strcmp("change", action) && strcmp("(null)", prop) != 0) {
+					backlight_restore();
+				}
+				udev_device_unref(dev);
+			} else {
+				perror("No device from receive device");
+			}
 		}
-		if(on_splitter)
-			*splits[split_idx++] = sbuf;
-		on_splitter = 0;
 	}
-	if(split_idx != 3) return;
-	if(!strcmp(type, "ac_adapter")) {
-		backlight_restore();
-	}
-}
-
-void* acpi_listen(void* data) {
-	int s = socket(AF_UNIX, SOCK_STREAM, 0);
-	if(s == -1) {
-		perror("Cannot open socket");
-		exit(EXIT_FAILURE);
-	}
-	struct sockaddr_un addr;
-	memset(&addr, 0, sizeof(addr));
-	addr.sun_family = AF_UNIX;
-	strncpy(addr.sun_path, ACPID_SOCKET, sizeof(addr.sun_path) - 1);
-	if(connect(s, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
-		perror("Cannot connect to acpid socket " ACPID_SOCKET);
-		exit(EXIT_FAILURE);
-	}
-	char buf[4097];
-	for(;;) {
-		int len = read(s, buf, sizeof(buf) - 1);
-		if(len == -1 && errno != EAGAIN) {
-			perror("Cannot read from ACPID_SOCKET " ACPID_SOCKET);
-			exit(EXIT_FAILURE);
-		}
-		if(len <= 0) continue;
-		buf[len] = 0;
-		handle_acpi_event(buf);
-	}
+cleanup:
+	if(udev) udev_unref(udev);
+	if(udev_monitor) udev_monitor_unref(udev_monitor);
 	return NULL;
 }
 
@@ -158,7 +143,7 @@ int main() {
 	backlight_save();
 	umask(0);
 	pthread_t t;
-	if(pthread_create(&t, NULL, acpi_listen, NULL)) {
+	if(pthread_create(&t, NULL, udev_listen, NULL)) {
 		perror("Cannot create a thread");
 		exit(EXIT_FAILURE);
 	}

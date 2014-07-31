@@ -13,11 +13,11 @@ DEPENDS_CLIENT := $(SOURCES_CLIENT:.c=.d)
 
 CC ?= gcc
 
-CFLAGS += -g -std=c99 -Wall -Wextra -pthread $(shell pkg-config --cflags dbus-1)
+CFLAGS += -g -std=c99 -Wall -Wextra -pthread $(shell pkg-config --cflags dbus-1 libudev)
 
-LDFLAGS += -pthread $(shell pkg-config --libs-only-L dbus-1)
+LDFLAGS += -pthread $(shell pkg-config --libs-only-L dbus-1 libudev)
 
-LIBS += -lm $(shell pkg-config --libs-only-l dbus-1)
+LIBS += -lm $(shell pkg-config --libs-only-l dbus-1 libudev)
 
 all: $(TARGET_DAEMON) $(TARGET_CLIENT)
 
