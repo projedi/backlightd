@@ -4,7 +4,7 @@
 
 #include "io.h"
 
-char const* BACKLIGHT_PATH;
+char* BACKLIGHT_PATH = 0;
 
 char* strconcat(char const* str1, char const* str2) {
 	char* res = calloc(strlen(str1) + strlen(str2) + 1, sizeof(char));

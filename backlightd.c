@@ -139,8 +139,44 @@ cleanup:
 	return NULL;
 }
 
+int detect_backlight_device() {
+	int res = 0;
+	struct udev* udev = udev_new();
+	if(!udev) {
+		perror("Cannot create udev device");
+		goto cleanup;
+	}
+	struct udev_enumerate* udev_enumerate = udev_enumerate_new(udev);
+	if(udev_enumerate_add_match_subsystem(udev_enumerate, "backlight") < 0) {
+		perror("Cannot add match rule");
+		goto cleanup;
+	}
+	if(udev_enumerate_scan_devices(udev_enumerate) < 0) {
+		perror("Cannot scan devices");
+		goto cleanup;
+	}
+	struct udev_list_entry* udev_list_entry = udev_enumerate_get_list_entry(udev_enumerate);
+	if(!udev_list_entry) {
+		perror("No backlight devices found");
+		goto cleanup;
+	}
+	char const* devname = udev_list_entry_get_name(udev_list_entry);
+	if(BACKLIGHT_PATH)
+		free(BACKLIGHT_PATH);
+	BACKLIGHT_PATH = calloc(strlen(devname) + 1, sizeof(char));
+	strcpy(BACKLIGHT_PATH, devname);
+	if(udev_list_entry_get_next(udev_list_entry))
+		fprintf(stderr, "Warning: more than one backlight device present, selecting the first\n");
+	res = 1;
+cleanup:
+	if(udev) udev_unref(udev);
+	if(udev_enumerate) udev_enumerate_unref(udev_enumerate);
+	return res;
+}
+
 int main() {
-	BACKLIGHT_PATH = "/sys/class/backlight/intel_backlight";
+	if(!detect_backlight_device())
+		return EXIT_FAILURE;
 	backlight_save();
 	umask(0);
 	pthread_t t;
