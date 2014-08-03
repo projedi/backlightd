@@ -140,6 +140,7 @@ cleanup:
 }
 
 int main() {
+	BACKLIGHT_PATH = "/sys/class/backlight/intel_backlight";
 	backlight_save();
 	umask(0);
 	pthread_t t;

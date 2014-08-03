@@ -1,6 +1,6 @@
 #pragma once
 
-#define BACKLIGHT_PATH "/sys/class/backlight/intel_backlight"
+extern char const* BACKLIGHT_PATH;
 
 extern void backlight_read(int* current_val, int* max_val);
 
