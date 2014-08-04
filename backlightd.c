@@ -13,34 +13,36 @@
 
 static int CURRENT_BACKLIGHT_VALUE = -1;
 
+static char* BACKLIGHT_PATH = 0;
+
 void backlight_up() {
 	int current_val;
 	int max_val;
-	backlight_read(&current_val, &max_val);
+	backlight_read(BACKLIGHT_PATH, &current_val, &max_val);
 	int current_level = get_backlight_level(current_val, max_val);
 	int new_val = get_backlight_value(current_level + 1, max_val);
 	CURRENT_BACKLIGHT_VALUE = new_val;
-	backlight_write(new_val);
+	backlight_write(BACKLIGHT_PATH, new_val);
 }
 
 void backlight_down() {
 	int current_val;
 	int max_val;
-	backlight_read(&current_val, &max_val);
+	backlight_read(BACKLIGHT_PATH, &current_val, &max_val);
 	int current_level = get_backlight_level(current_val, max_val);
 	int new_val = get_backlight_value(current_level - 1, max_val);
 	CURRENT_BACKLIGHT_VALUE = new_val;
-	backlight_write(new_val);
+	backlight_write(BACKLIGHT_PATH, new_val);
 }
 
 void backlight_save() {
 	int max_val;
-	backlight_read(&CURRENT_BACKLIGHT_VALUE, &max_val);
+	backlight_read(BACKLIGHT_PATH, &CURRENT_BACKLIGHT_VALUE, &max_val);
 }
 
 void backlight_restore() {
 	if(CURRENT_BACKLIGHT_VALUE == -1) return;
-	backlight_write(CURRENT_BACKLIGHT_VALUE);
+	backlight_write(BACKLIGHT_PATH, CURRENT_BACKLIGHT_VALUE);
 }
 
 void dbus_listen() {

@@ -4,17 +4,15 @@
 
 #include "io.h"
 
-char* BACKLIGHT_PATH = 0;
-
-char* strconcat(char const* str1, char const* str2) {
+static char* strconcat(char const* str1, char const* str2) {
 	char* res = calloc(strlen(str1) + strlen(str2) + 1, sizeof(char));
 	strcpy(res, str1);
 	strcat(res, str2);
 	return res;
 }
 
-void backlight_read(int* current_val, int* max_val) {
-	char* cur_filename = strconcat(BACKLIGHT_PATH, "/brightness");
+void backlight_read(char const* backlight_path, int* current_val, int* max_val) {
+	char* cur_filename = strconcat(backlight_path, "/brightness");
 	FILE* cur_file = fopen(cur_filename, "r");
 	if(!cur_file) {
 		perror("Can't open brightness for reading");
@@ -26,7 +24,7 @@ void backlight_read(int* current_val, int* max_val) {
 	}
 	fclose(cur_file);
 	free(cur_filename);
-	char* max_filename = strconcat(BACKLIGHT_PATH, "/max_brightness");
+	char* max_filename = strconcat(backlight_path, "/max_brightness");
 	FILE* max_file = fopen(max_filename, "r");
 	if(!max_file) {
 		perror("Can't open max_brightness for reading");
@@ -40,8 +38,8 @@ void backlight_read(int* current_val, int* max_val) {
 	free(max_filename);
 }
 
-void backlight_write(int new_val) {
-	char* cur_filename = strconcat(BACKLIGHT_PATH, "/brightness");
+void backlight_write(char const* backlight_path, int new_val) {
+	char* cur_filename = strconcat(backlight_path, "/brightness");
 	FILE* cur_file = fopen(cur_filename, "w");
 	if(!cur_file) {
 		perror("Can't open brightness for writing");
