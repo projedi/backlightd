@@ -64,6 +64,13 @@ void backlight_restore(char const* backlight_path) {
 	backlight_write(backlight_path, CURRENT_BACKLIGHT_VALUE);
 }
 
+static DBusMessage* backlight_current_level(char const* backlight_path, DBusMessage* message) {
+	DBusMessage* reply = dbus_message_new_method_return(message);
+	dbus_int32_t v = CURRENT_BACKLIGHT_VALUE;
+	dbus_message_append_args(reply, DBUS_TYPE_INT32, &v, DBUS_TYPE_INVALID);
+	return reply;
+}
+
 void dbus_listen() {
 	DBusError err;
 	dbus_error_init(&err);
@@ -98,17 +105,24 @@ void dbus_listen() {
 			continue;
 		}
 
+		DBusMessage* reply = 0;
 		if(dbus_message_is_signal(message, "org.freedesktop.DBus", "NameAcquired"))
 			continue;
 		if(dbus_message_is_method_call(message, "org.backlightd.Backlight", "Increase"))
 			backlight_up(BACKLIGHT_PATHS[BACKLIGHT_PATH_CURRENT]);
 		else if(dbus_message_is_method_call(message, "org.backlightd.Backlight", "Decrease"))
 			backlight_down(BACKLIGHT_PATHS[BACKLIGHT_PATH_CURRENT]);
+		else if(dbus_message_is_method_call(message, "org.backlightd.Backlight", "CurrentLevel"))
+			reply = backlight_current_level(BACKLIGHT_PATHS[BACKLIGHT_PATH_CURRENT], message);
 		else {
 			fprintf(stderr, "Unknown dbus message\n");
 			fprintf(stderr, "\tInterface: %s\n", dbus_message_get_interface(message));
 			fprintf(stderr, "\tMember: %s\n", dbus_message_get_member(message));
 			fprintf(stderr, "\tPath: %s\n", dbus_message_get_path(message));
+		}
+		if(reply) {
+			dbus_connection_send(connection, reply, 0);
+			dbus_message_unref(reply);
 		}
 
 		dbus_message_unref(message);

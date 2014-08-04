@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 
-void dbus_sendsignal(char const* name) {
+void dbus_sendsignal(char const* name, DBusPendingCall** callback) {
 	DBusError err;
 	dbus_error_init(&err);
 
@@ -25,13 +25,24 @@ void dbus_sendsignal(char const* name) {
 	}
 
 	dbus_uint32_t serial = 0;
-	dbus_connection_send(connection, message, &serial);
+	if(callback)
+		dbus_connection_send_with_reply(connection, message, callback, DBUS_TIMEOUT_INFINITE);
+	else
+		dbus_connection_send(connection, message, &serial);
 	dbus_connection_flush(connection);
 	dbus_message_unref(message);
 }
 
+void handleCurrentLevel(DBusPendingCall* callback) {
+	dbus_pending_call_block(callback);
+	DBusMessage* message = dbus_pending_call_steal_reply(callback);
+	dbus_int32_t v;
+	dbus_message_get_args(message, 0, DBUS_TYPE_INT32, &v, DBUS_TYPE_INVALID);
+	printf("Got %d\n", v);
+}
+
 void usage(char const* progname) {
-	fprintf(stderr, "USAGE: %s {up|down}\n", progname);
+	fprintf(stderr, "USAGE: %s {up|down|current}\n", progname);
 }
 
 int main(int argc, char** argv) {
@@ -40,10 +51,15 @@ int main(int argc, char** argv) {
 		return 1;
 	}
 	if(!strcmp(argv[1], "up")) {
-		dbus_sendsignal("Increase");
+		dbus_sendsignal("Increase", 0);
 		return 0;
 	} else if(!strcmp(argv[1], "down")) {
-		dbus_sendsignal("Decrease");
+		dbus_sendsignal("Decrease", 0);
+		return 0;
+	} else if(!strcmp(argv[1], "current")) {
+		DBusPendingCall* callback;
+		dbus_sendsignal("CurrentLevel", &callback);
+		handleCurrentLevel(callback);
 		return 0;
 	} else {
 		usage(argv[0]);
