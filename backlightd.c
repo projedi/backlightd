@@ -13,7 +13,26 @@
 
 static int CURRENT_BACKLIGHT_VALUE = -1;
 
-static char* BACKLIGHT_PATH = 0;
+static char** BACKLIGHT_PATHS = 0;
+
+static int BACKLIGHT_PATH_COUNT = 0;
+
+static int BACKLIGHT_PATH_CURRENT = -1;
+
+// Since there are 1, 2, 3(?) backlight paths, this is good enough.
+void append_backlight_path(const char* backlight_path) {
+	int count = BACKLIGHT_PATH_COUNT + 1;
+	char** paths = calloc(count, sizeof(char*));
+	for(int i = 0; i < count - 1; ++i) {
+		paths[i] = BACKLIGHT_PATHS[i];
+	}
+	paths[count - 1] = calloc(strlen(backlight_path) + 1, sizeof(char));
+	strcpy(paths[count - 1], backlight_path);
+	if(BACKLIGHT_PATHS)
+		free(BACKLIGHT_PATHS);
+	BACKLIGHT_PATHS = paths;
+	BACKLIGHT_PATH_COUNT = count;
+}
 
 void backlight_up(char const* backlight_path) {
 	int current_val;
@@ -82,9 +101,9 @@ void dbus_listen() {
 		if(dbus_message_is_signal(message, "org.freedesktop.DBus", "NameAcquired"))
 			continue;
 		if(dbus_message_is_method_call(message, "org.backlightd.Backlight", "Increase"))
-			backlight_up(BACKLIGHT_PATH);
+			backlight_up(BACKLIGHT_PATHS[BACKLIGHT_PATH_CURRENT]);
 		else if(dbus_message_is_method_call(message, "org.backlightd.Backlight", "Decrease"))
-			backlight_down(BACKLIGHT_PATH);
+			backlight_down(BACKLIGHT_PATHS[BACKLIGHT_PATH_CURRENT]);
 		else {
 			fprintf(stderr, "Unknown dbus message\n");
 			fprintf(stderr, "\tInterface: %s\n", dbus_message_get_interface(message));
@@ -127,7 +146,7 @@ void* udev_listen(void* data) {
 				const char* action = udev_device_get_action(dev);
 				const char* prop = udev_device_get_property_value(dev, "POWER_SUPPLY_ONLINE");
 				if(prop && !strcmp("change", action) && strcmp("(null)", prop) != 0) {
-					backlight_restore(BACKLIGHT_PATH);
+					backlight_restore(BACKLIGHT_PATHS[BACKLIGHT_PATH_CURRENT]);
 				}
 				udev_device_unref(dev);
 			} else {
@@ -157,18 +176,14 @@ int detect_backlight_device() {
 		perror("Cannot scan devices");
 		goto cleanup;
 	}
-	struct udev_list_entry* udev_list_entry = udev_enumerate_get_list_entry(udev_enumerate);
-	if(!udev_list_entry) {
+	for(struct udev_list_entry* i = udev_enumerate_get_list_entry(udev_enumerate); i;
+			i = udev_list_entry_get_next(i))
+		append_backlight_path(udev_list_entry_get_name(i));
+	if(BACKLIGHT_PATH_COUNT == 0) {
 		perror("No backlight devices found");
 		goto cleanup;
 	}
-	char const* devname = udev_list_entry_get_name(udev_list_entry);
-	if(BACKLIGHT_PATH)
-		free(BACKLIGHT_PATH);
-	BACKLIGHT_PATH = calloc(strlen(devname) + 1, sizeof(char));
-	strcpy(BACKLIGHT_PATH, devname);
-	if(udev_list_entry_get_next(udev_list_entry))
-		fprintf(stderr, "Warning: more than one backlight device present, selecting the first\n");
+	BACKLIGHT_PATH_CURRENT = 0;
 	res = 1;
 cleanup:
 	if(udev) udev_unref(udev);
@@ -179,7 +194,7 @@ cleanup:
 int main() {
 	if(!detect_backlight_device())
 		return EXIT_FAILURE;
-	backlight_save(BACKLIGHT_PATH);
+	backlight_save(BACKLIGHT_PATHS[BACKLIGHT_PATH_CURRENT]);
 	umask(0);
 	pthread_t t;
 	if(pthread_create(&t, NULL, udev_listen, NULL)) {
