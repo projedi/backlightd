@@ -15,34 +15,34 @@ static int CURRENT_BACKLIGHT_VALUE = -1;
 
 static char* BACKLIGHT_PATH = 0;
 
-void backlight_up() {
+void backlight_up(char const* backlight_path) {
 	int current_val;
 	int max_val;
-	backlight_read(BACKLIGHT_PATH, &current_val, &max_val);
+	backlight_read(backlight_path, &current_val, &max_val);
 	int current_level = get_backlight_level(current_val, max_val);
 	int new_val = get_backlight_value(current_level + 1, max_val);
 	CURRENT_BACKLIGHT_VALUE = new_val;
-	backlight_write(BACKLIGHT_PATH, new_val);
+	backlight_write(backlight_path, new_val);
 }
 
-void backlight_down() {
+void backlight_down(char const* backlight_path) {
 	int current_val;
 	int max_val;
-	backlight_read(BACKLIGHT_PATH, &current_val, &max_val);
+	backlight_read(backlight_path, &current_val, &max_val);
 	int current_level = get_backlight_level(current_val, max_val);
 	int new_val = get_backlight_value(current_level - 1, max_val);
 	CURRENT_BACKLIGHT_VALUE = new_val;
-	backlight_write(BACKLIGHT_PATH, new_val);
+	backlight_write(backlight_path, new_val);
 }
 
-void backlight_save() {
+void backlight_save(char const* backlight_path) {
 	int max_val;
-	backlight_read(BACKLIGHT_PATH, &CURRENT_BACKLIGHT_VALUE, &max_val);
+	backlight_read(backlight_path, &CURRENT_BACKLIGHT_VALUE, &max_val);
 }
 
-void backlight_restore() {
+void backlight_restore(char const* backlight_path) {
 	if(CURRENT_BACKLIGHT_VALUE == -1) return;
-	backlight_write(BACKLIGHT_PATH, CURRENT_BACKLIGHT_VALUE);
+	backlight_write(backlight_path, CURRENT_BACKLIGHT_VALUE);
 }
 
 void dbus_listen() {
@@ -82,9 +82,9 @@ void dbus_listen() {
 		if(dbus_message_is_signal(message, "org.freedesktop.DBus", "NameAcquired"))
 			continue;
 		if(dbus_message_is_method_call(message, "org.backlightd.Backlight", "Increase"))
-			backlight_up();
+			backlight_up(BACKLIGHT_PATH);
 		else if(dbus_message_is_method_call(message, "org.backlightd.Backlight", "Decrease"))
-			backlight_down();
+			backlight_down(BACKLIGHT_PATH);
 		else {
 			fprintf(stderr, "Unknown dbus message\n");
 			fprintf(stderr, "\tInterface: %s\n", dbus_message_get_interface(message));
@@ -127,7 +127,7 @@ void* udev_listen(void* data) {
 				const char* action = udev_device_get_action(dev);
 				const char* prop = udev_device_get_property_value(dev, "POWER_SUPPLY_ONLINE");
 				if(prop && !strcmp("change", action) && strcmp("(null)", prop) != 0) {
-					backlight_restore();
+					backlight_restore(BACKLIGHT_PATH);
 				}
 				udev_device_unref(dev);
 			} else {
@@ -179,7 +179,7 @@ cleanup:
 int main() {
 	if(!detect_backlight_device())
 		return EXIT_FAILURE;
-	backlight_save();
+	backlight_save(BACKLIGHT_PATH);
 	umask(0);
 	pthread_t t;
 	if(pthread_create(&t, NULL, udev_listen, NULL)) {
