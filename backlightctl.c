@@ -41,6 +41,14 @@ void handleCurrentLevel(DBusPendingCall* callback) {
 	printf("Got %d\n", v);
 }
 
+void handleMaxLevel(DBusPendingCall* callback) {
+	dbus_pending_call_block(callback);
+	DBusMessage* message = dbus_pending_call_steal_reply(callback);
+	dbus_int32_t v;
+	dbus_message_get_args(message, 0, DBUS_TYPE_INT32, &v, DBUS_TYPE_INVALID);
+	printf("Got %d\n", v);
+}
+
 void usage(char const* progname) {
 	fprintf(stderr, "USAGE: %s {up|down|current}\n", progname);
 }
@@ -60,6 +68,11 @@ int main(int argc, char** argv) {
 		DBusPendingCall* callback;
 		dbus_sendsignal("CurrentLevel", &callback);
 		handleCurrentLevel(callback);
+		return 0;
+	} else if(!strcmp(argv[1], "max")) {
+		DBusPendingCall* callback;
+		dbus_sendsignal("MaxLevel", &callback);
+		handleMaxLevel(callback);
 		return 0;
 	} else {
 		usage(argv[0]);

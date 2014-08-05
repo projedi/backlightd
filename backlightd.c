@@ -71,6 +71,16 @@ static DBusMessage* backlight_current_level(char const* backlight_path, DBusMess
 	return reply;
 }
 
+static DBusMessage* backlight_max_level(char const* backlight_path, DBusMessage* message) {
+	DBusMessage* reply = dbus_message_new_method_return(message);
+	int current_val;
+	int max_val;
+	backlight_read(backlight_path, &current_val, &max_val);
+	dbus_int32_t v = max_val;
+	dbus_message_append_args(reply, DBUS_TYPE_INT32, &v, DBUS_TYPE_INVALID);
+	return reply;
+}
+
 void dbus_listen() {
 	DBusError err;
 	dbus_error_init(&err);
@@ -114,6 +124,8 @@ void dbus_listen() {
 			backlight_down(BACKLIGHT_PATHS[BACKLIGHT_PATH_CURRENT]);
 		else if(dbus_message_is_method_call(message, "org.backlightd.Backlight", "CurrentLevel"))
 			reply = backlight_current_level(BACKLIGHT_PATHS[BACKLIGHT_PATH_CURRENT], message);
+		else if(dbus_message_is_method_call(message, "org.backlightd.Backlight", "MaxLevel"))
+			reply = backlight_max_level(BACKLIGHT_PATHS[BACKLIGHT_PATH_CURRENT], message);
 		else {
 			fprintf(stderr, "Unknown dbus message\n");
 			fprintf(stderr, "\tInterface: %s\n", dbus_message_get_interface(message));
