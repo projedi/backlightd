@@ -33,24 +33,42 @@ void dbus_sendsignal(char const* name, DBusPendingCall** callback) {
 	dbus_message_unref(message);
 }
 
-void handleCurrentValue(DBusPendingCall* callback) {
-	dbus_pending_call_block(callback);
-	DBusMessage* message = dbus_pending_call_steal_reply(callback);
-	dbus_int32_t v;
-	dbus_message_get_args(message, 0, DBUS_TYPE_INT32, &v, DBUS_TYPE_INVALID);
-	printf("Got %d\n", v);
+int handleIncrease() {
+	dbus_sendsignal("Increase", 0);
+	return 0;
 }
 
-void handleMaxValue(DBusPendingCall* callback) {
+int handleDecrease() {
+	dbus_sendsignal("Decrease", 0);
+	return 0;
+}
+
+int handleCurrentValue() {
+	DBusPendingCall* callback;
+	dbus_sendsignal("CurrentValue", &callback);
 	dbus_pending_call_block(callback);
 	DBusMessage* message = dbus_pending_call_steal_reply(callback);
 	dbus_int32_t v;
 	dbus_message_get_args(message, 0, DBUS_TYPE_INT32, &v, DBUS_TYPE_INVALID);
 	printf("Got %d\n", v);
+	dbus_pending_call_unref(callback);
+	return 0;
+}
+
+int handleMaxValue() {
+	DBusPendingCall* callback;
+	dbus_sendsignal("MaxValue", &callback);
+	dbus_pending_call_block(callback);
+	DBusMessage* message = dbus_pending_call_steal_reply(callback);
+	dbus_int32_t v;
+	dbus_message_get_args(message, 0, DBUS_TYPE_INT32, &v, DBUS_TYPE_INVALID);
+	printf("Got %d\n", v);
+	dbus_pending_call_unref(callback);
+	return 0;
 }
 
 void usage(char const* progname) {
-	fprintf(stderr, "USAGE: %s {up|down|current}\n", progname);
+	fprintf(stderr, "USAGE: %s {up|down|current|max}\n", progname);
 }
 
 int main(int argc, char** argv) {
@@ -58,24 +76,17 @@ int main(int argc, char** argv) {
 		usage(argv[0]);
 		return 1;
 	}
-	if(!strcmp(argv[1], "up")) {
-		dbus_sendsignal("Increase", 0);
-		return 0;
-	} else if(!strcmp(argv[1], "down")) {
-		dbus_sendsignal("Decrease", 0);
-		return 0;
-	} else if(!strcmp(argv[1], "current")) {
-		DBusPendingCall* callback;
-		dbus_sendsignal("CurrentValue", &callback);
-		handleCurrentValue(callback);
-		return 0;
-	} else if(!strcmp(argv[1], "max")) {
-		DBusPendingCall* callback;
-		dbus_sendsignal("MaxValue", &callback);
-		handleMaxValue(callback);
-		return 0;
-	} else {
+	int ret = 1;
+	if(!strcmp(argv[1], "up"))
+		ret = handleIncrease();
+	else if(!strcmp(argv[1], "down"))
+		ret = handleDecrease();
+	else if(!strcmp(argv[1], "current"))
+		ret = handleCurrentValue();
+	else if(!strcmp(argv[1], "max"))
+		ret = handleMaxValue();
+	else
 		usage(argv[0]);
-		return 1;
-	}
+
+	return ret;
 }
