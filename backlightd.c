@@ -103,19 +103,16 @@ static void dbus_listen() {
 		exit(1);
 	}
 
-	while(1) {
-		// TODO: Blocking does not work for some reason
-		dbus_connection_read_write(connection, 0);
+	while(dbus_connection_read_write_dispatch(connection, -1)) {
 		DBusMessage* message = dbus_connection_pop_message(connection);
 		if(!message) {
-			usleep(10000);
 			continue;
 		}
 
 		DBusMessage* reply = 0;
 		if(dbus_message_is_signal(message, "org.freedesktop.DBus", "NameAcquired"))
 		   { } // Unref message
-		if(dbus_message_is_method_call(message, "org.backlightd.Backlight", "CurrentValue"))
+		else if(dbus_message_is_method_call(message, "org.backlightd.Backlight", "CurrentValue"))
 			reply = backlight_current_value(BACKLIGHT_PATHS[BACKLIGHT_PATH_CURRENT], message);
 		else if(dbus_message_is_method_call(message, "org.backlightd.Backlight", "MaxValue"))
 			reply = backlight_max_value(BACKLIGHT_PATHS[BACKLIGHT_PATH_CURRENT], message);
