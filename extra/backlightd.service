@@ -1,9 +1,8 @@
 [Unit]
 Description=Backlight daemon
-Requires=acpid.socket
 
 [Service]
-ExecStart=/usr/local/bin/backlightd
+ExecStart=/usr/lib/backlightd/backlightd
 
 [Install]
 WantedBy=multi-user.target

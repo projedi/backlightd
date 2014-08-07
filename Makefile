@@ -1,5 +1,10 @@
 .PHONY: all clean
 
+DESTBIN := $(DESTDIR)usr/bin
+DESTPRIVATE := $(DESTDIR)usr/lib/backlightd
+DESTSYSTEMDSERVICE := $(DESTDIR)usr/lib/systemd/system
+DESTDBUSCONF := $(DESTDIR)etc/dbus-1/system.d
+
 SOURCEDIR := src
 BUILDDIR := build
 
@@ -39,5 +44,15 @@ $(TARGET_CLIENT): $(OBJECTS_CLIENT)
 clean:
 	rm -f $(TARGET_DAEMON) $(TARGET_CLIENT)
 	rm -f $(OBJECTS_DAEMON) $(DEPENDS_DAEMON) $(OBJECTS_CLIENT) $(DEPENDS_CLIENT)
+
+install:
+	mkdir -m 755 -p $(DESTBIN)
+	mkdir -m 755 -p $(DESTPRIVATE)
+	mkdir -m 755 -p $(DESTSYSTEMDSERVICE)
+	mkdir -m 755 -p $(DESTDBUSCONF)
+	install -m 755 $(TARGET_CLIENT) $(DESTBIN)
+	install -m 755 $(TARGET_DAEMON) $(DESTPRIVATE)
+	install -m 644 extra/backlightd.service $(DESTSYSTEMDSERVICE)
+	install -m 644 extra/org.backlightd.daemon.conf $(DESTDBUSCONF)
 
 include $(DEPENDS_DAEMON) $(DEPENDS_CLIENT)
