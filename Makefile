@@ -1,15 +1,18 @@
 .PHONY: all clean
 
+SOURCEDIR := src
+BUILDDIR := build
+
 TARGET_DAEMON := backlightd
 TARGET_CLIENT := backlightctl
 
 SOURCES_DAEMON := backlightd.c io.c
-OBJECTS_DAEMON := $(SOURCES_DAEMON:.c=.o)
-DEPENDS_DAEMON := $(SOURCES_DAEMON:.c=.d)
+OBJECTS_DAEMON := $(SOURCES_DAEMON:%.c=$(BUILDDIR)/%.o)
+DEPENDS_DAEMON := $(SOURCES_DAEMON:%.c=$(BUILDDIR)/%.d)
 
 SOURCES_CLIENT := backlightctl.c backlight.c
-OBJECTS_CLIENT := $(SOURCES_CLIENT:.c=.o)
-DEPENDS_CLIENT := $(SOURCES_CLIENT:.c=.d)
+OBJECTS_CLIENT := $(SOURCES_CLIENT:%.c=$(BUILDDIR)/%.o)
+DEPENDS_CLIENT := $(SOURCES_CLIENT:%.c=$(BUILDDIR)/%.d)
 
 CC ?= gcc
 
@@ -21,10 +24,10 @@ LIBS += -lm $(shell pkg-config --libs-only-l dbus-1 libudev)
 
 all: $(TARGET_DAEMON) $(TARGET_CLIENT)
 
-%.o: %.c
-	$(CC) $(CFLAGS) -c $<
+$(BUILDDIR)/%.o: $(SOURCEDIR)/%.c
+	$(CC) $(CFLAGS) -c $< -o $@
 
-%.d: %.c
+$(BUILDDIR)/%.d: $(SOURCEDIR)/%.c
 	$(CC) $(CFLAGS) -MF $@ -MG -MM -MP -MT $(^:.c=.o) $<
 
 $(TARGET_DAEMON): $(OBJECTS_DAEMON)
