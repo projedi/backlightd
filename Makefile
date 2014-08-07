@@ -7,7 +7,7 @@ SOURCES_DAEMON := backlightd.c io.c backlight.c
 OBJECTS_DAEMON := $(SOURCES_DAEMON:.c=.o)
 DEPENDS_DAEMON := $(SOURCES_DAEMON:.c=.d)
 
-SOURCES_CLIENT := backlightctl.c
+SOURCES_CLIENT := backlightctl.c backlight.c
 OBJECTS_CLIENT := $(SOURCES_CLIENT:.c=.o)
 DEPENDS_CLIENT := $(SOURCES_CLIENT:.c=.d)
 
