@@ -3,7 +3,7 @@
 TARGET_DAEMON := backlightd
 TARGET_CLIENT := backlightctl
 
-SOURCES_DAEMON := backlightd.c io.c backlight.c
+SOURCES_DAEMON := backlightd.c io.c
 OBJECTS_DAEMON := $(SOURCES_DAEMON:.c=.o)
 DEPENDS_DAEMON := $(SOURCES_DAEMON:.c=.d)
 

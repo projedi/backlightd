@@ -8,7 +8,6 @@
 #include <sys/select.h>
 #include <unistd.h>
 
-#include "backlight.h"
 #include "io.h"
 
 static int CURRENT_BACKLIGHT_VALUE = -1;
@@ -32,26 +31,6 @@ void append_backlight_path(const char* backlight_path) {
 		free(BACKLIGHT_PATHS);
 	BACKLIGHT_PATHS = paths;
 	BACKLIGHT_PATH_COUNT = count;
-}
-
-void backlight_up(char const* backlight_path) {
-	int current_val;
-	int max_val;
-	backlight_read(backlight_path, &current_val, &max_val);
-	int current_level = get_backlight_level(current_val, max_val);
-	int new_val = get_backlight_value(current_level + 1, max_val);
-	CURRENT_BACKLIGHT_VALUE = new_val;
-	backlight_write(backlight_path, new_val);
-}
-
-void backlight_down(char const* backlight_path) {
-	int current_val;
-	int max_val;
-	backlight_read(backlight_path, &current_val, &max_val);
-	int current_level = get_backlight_level(current_val, max_val);
-	int new_val = get_backlight_value(current_level - 1, max_val);
-	CURRENT_BACKLIGHT_VALUE = new_val;
-	backlight_write(backlight_path, new_val);
 }
 
 void backlight_save(char const* backlight_path) {
@@ -135,11 +114,7 @@ void dbus_listen() {
 		DBusMessage* reply = 0;
 		if(dbus_message_is_signal(message, "org.freedesktop.DBus", "NameAcquired"))
 			continue;
-		if(dbus_message_is_method_call(message, "org.backlightd.Backlight", "Increase"))
-			backlight_up(BACKLIGHT_PATHS[BACKLIGHT_PATH_CURRENT]);
-		else if(dbus_message_is_method_call(message, "org.backlightd.Backlight", "Decrease"))
-			backlight_down(BACKLIGHT_PATHS[BACKLIGHT_PATH_CURRENT]);
-		else if(dbus_message_is_method_call(message, "org.backlightd.Backlight", "CurrentValue"))
+		if(dbus_message_is_method_call(message, "org.backlightd.Backlight", "CurrentValue"))
 			reply = backlight_current_value(BACKLIGHT_PATHS[BACKLIGHT_PATH_CURRENT], message);
 		else if(dbus_message_is_method_call(message, "org.backlightd.Backlight", "MaxValue"))
 			reply = backlight_max_value(BACKLIGHT_PATHS[BACKLIGHT_PATH_CURRENT], message);
