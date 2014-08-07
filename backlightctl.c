@@ -3,19 +3,19 @@
 #include <stdio.h>
 #include <string.h>
 
-void dbus_sendsignal(char const* name, DBusPendingCall** callback) {
-	DBusError err;
-	dbus_error_init(&err);
+DBusConnection* init_dbus() {
+	DbusError err;
+	dbus_init_error(&err);
 
 	DBusConnection* connection = dbus_bus_get(DBUS_BUS_SYSTEM, &err);
 	if(dbus_error_is_set(&err)) {
 		fprintf(stderr, "Connection error: %s\n", err.message);
 		dbus_error_free(&err);
+		return NULL;
 	}
-	if(!connection) {
-		fprintf(stderr, "Connection is NULL\n");
-		exit(1);
-	}
+	return NULL;
+}
+
 
 	DBusMessage* message = dbus_message_new_method_call("org.backlightd.daemon",
 			"/org/backlightd/Object", "org.backlightd.Backlight", name);
@@ -72,15 +72,17 @@ void usage(char const* progname) {
 }
 
 int main(int argc, char** argv) {
+	int ret = 1;
 	if(argc != 2) {
 		usage(argv[0]);
-		return 1;
+		return ret;
 	}
-	int ret = 1;
+	DBusConnection* connection = init_dbus();
+	if(!connection) return ret;
 	if(!strcmp(argv[1], "up"))
-		ret = handleIncrease();
+		ret = handleIncrease(connection);
 	else if(!strcmp(argv[1], "down"))
-		ret = handleDecrease();
+		ret = handleDecrease(connection);
 	else if(!strcmp(argv[1], "current"))
 		ret = handleCurrentValue();
 	else if(!strcmp(argv[1], "max"))
