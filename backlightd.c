@@ -114,7 +114,7 @@ static void dbus_listen() {
 
 		DBusMessage* reply = 0;
 		if(dbus_message_is_signal(message, "org.freedesktop.DBus", "NameAcquired"))
-			continue;
+		   { } // Unref message
 		if(dbus_message_is_method_call(message, "org.backlightd.Backlight", "CurrentValue"))
 			reply = backlight_current_value(BACKLIGHT_PATHS[BACKLIGHT_PATH_CURRENT], message);
 		else if(dbus_message_is_method_call(message, "org.backlightd.Backlight", "MaxValue"))
