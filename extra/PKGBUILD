@@ -1,0 +1,30 @@
+_pkgname=backlightd
+
+pkgname=backlightd-git
+pkgver=0.0.0
+pkgrel=1
+pkgdesc='Daemon for controlling backlight'
+arch=('i686', 'x86_64')
+url='https://github.com/projedi/backlightd'
+depends=('dbus' 'systemd')
+makedepends=('git')
+conflicts=("$_pkgname")
+provides=("$_pkgname")
+source=('git://github.com/projedi/backlightd.git')
+md5sums=('SKIP')
+
+build() {
+   cd "$srcdir/$_pkgname"
+   mkdir build
+   make
+}
+
+package() {
+   cd "$srcdir/$_pkgname"
+   make DESTDIR="$pkgdir/" install
+}
+
+pkgver() {
+  cd "$_pkgname"
+  git describe --long | sed -r 's/^v//;s/([^-]*-g)/r\1/;s/-/./g'
+}
