@@ -1,4 +1,4 @@
-#include <errno.h>
+#define _GNU_SOURCE
 #include <dbus/dbus.h>
 #include <libudev.h>
 #include <pthread.h>
@@ -9,6 +9,7 @@
 #include <unistd.h>
 
 #include "io.h"
+#include "util.h"
 
 static int CURRENT_BACKLIGHT_VALUE = -1;
 
@@ -19,7 +20,7 @@ static int BACKLIGHT_PATH_COUNT = 0;
 static int BACKLIGHT_PATH_CURRENT = -1;
 
 // Since there are 1, 2, 3(?) backlight paths, this is good enough.
-void append_backlight_path(const char* backlight_path) {
+static void append_backlight_path(const char* backlight_path) {
 	int count = BACKLIGHT_PATH_COUNT + 1;
 	char** paths = calloc(count, sizeof(char*));
 	for(int i = 0; i < count - 1; ++i) {
@@ -33,17 +34,17 @@ void append_backlight_path(const char* backlight_path) {
 	BACKLIGHT_PATH_COUNT = count;
 }
 
-void backlight_save(char const* backlight_path) {
+static void backlight_save(char const* backlight_path) {
 	int max_val;
 	backlight_read(backlight_path, &CURRENT_BACKLIGHT_VALUE, &max_val);
 }
 
-void backlight_restore(char const* backlight_path) {
+static void backlight_restore(char const* backlight_path) {
 	if(CURRENT_BACKLIGHT_VALUE == -1) return;
 	backlight_write(backlight_path, CURRENT_BACKLIGHT_VALUE);
 }
 
-static DBusMessage* backlight_current_value(char const* backlight_path, DBusMessage* message) {
+static DBusMessage* backlight_current_value(char const* UNUSED(backlight_path), DBusMessage* message) {
 	DBusMessage* reply = dbus_message_new_method_return(message);
 	dbus_int32_t v = CURRENT_BACKLIGHT_VALUE;
 	dbus_message_append_args(reply, DBUS_TYPE_INT32, &v, DBUS_TYPE_INVALID);
@@ -77,7 +78,7 @@ static DBusMessage* backlight_set_value(char const* backlight_path, DBusMessage*
 	return reply;
 }
 
-void dbus_listen() {
+static void dbus_listen() {
 	DBusError err;
 	dbus_error_init(&err);
 
@@ -135,7 +136,7 @@ void dbus_listen() {
 	}
 }
 
-void* udev_listen(void* data) {
+static void* udev_listen(void* UNUSED(data)) {
 	struct udev* udev = udev_new();
 	if(!udev) {
 		perror("Cannot create udev device");
@@ -180,7 +181,7 @@ cleanup:
 	return NULL;
 }
 
-int detect_backlight_device() {
+static int detect_backlight_device() {
 	int res = 0;
 	struct udev* udev = udev_new();
 	if(!udev) {
